@@ -60,10 +60,13 @@ export const checkAndRunCampaigns = async () => {
             .replace(/{Mobile}/g, lead.mobile || '');
         };
 
+        // Fetch existing leads for duplicate prevention
+        const existingLeadsResponse = await db.getLeadsByCampaignId(campaignId, 1, 10000);
+        const existingLeads = existingLeadsResponse.data || [];
+
         // 3. Save Leads and Build Notification Objects
         for (const rawLead of rawLeads) {
           // Duplicate prevention: prevent inserting same business place multiple times within the same campaign run
-          const existingLeads = await db.getLeadsByCampaignId(campaignId);
           const isDuplicate = existingLeads.some(l => l.place_id === rawLead.placeId);
           if (isDuplicate) {
             console.log(`[Scheduler] Skipping duplicate lead Place ID ${rawLead.placeId} for campaign ${campaignId}`);
