@@ -85,11 +85,18 @@ export const handleAction = async (req, res) => {
           await db.saveLog(id, `Campaign manually stopped by user.`);
           return res.status(200).json({ message: `Campaign ${id} successfully stopped.` });
         } catch (e) {
-          // If abort fails (e.g. not running), force update status anyway
           await db.updateCampaignStatus(id, 'E');
           await db.saveLog(id, `Campaign force stopped. Note: ${e.message}`);
           return res.status(200).json({ message: `Campaign ${id} stopped (force update).` });
         }
+
+      case 'RETRY':
+        if (!id) return res.status(400).json({ error: "Missing required 'id' for RETRY action" });
+        await db.updateCampaignStatus(id, 'P');
+        await db.saveLog(id, `Campaign manually marked for Retry. Status set to Pending.`);
+        // Optionally trigger the run automatically
+        checkAndRunCampaigns();
+        return res.status(200).json({ message: `Campaign ${id} marked for retry.` });
 
       default:
         return res.status(400).json({ error: `Invalid action: ${action}` });
