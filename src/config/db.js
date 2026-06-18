@@ -47,6 +47,12 @@ export const initDb = async () => {
       // Column might already exist, safe to ignore
     }
 
+    try {
+      await pgPool.query(`ALTER TABLE MARKETING_CAMPAIGN ADD COLUMN TIMEZONE VARCHAR(100);`);
+    } catch (e) {
+      // Column might already exist, safe to ignore
+    }
+
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS USER_MAST (
         ID SERIAL PRIMARY KEY,
@@ -191,12 +197,12 @@ export const db = {
     return rows[0];
   },
 
-  async createCampaign({ campaignName, searchQuery, actionCode, scheduledTime, leadLimit }) {
+  async createCampaign({ campaignName, searchQuery, actionCode, scheduledTime, leadLimit, timezone }) {
     const limit = leadLimit ? parseInt(leadLimit, 10) : 5;
     const { rows } = await pgPool.query(
-      `INSERT INTO MARKETING_CAMPAIGN (CAMPAIGN_NAME, SEARCH_QUERY, ACTION_CODE, SCHEDULED_TIME, LEAD_LIMIT)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [campaignName, searchQuery, actionCode, scheduledTime, limit]
+      `INSERT INTO MARKETING_CAMPAIGN (CAMPAIGN_NAME, SEARCH_QUERY, ACTION_CODE, SCHEDULED_TIME, LEAD_LIMIT, TIMEZONE)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [campaignName, searchQuery, actionCode, scheduledTime, limit, timezone]
     );
     return rows[0];
   },

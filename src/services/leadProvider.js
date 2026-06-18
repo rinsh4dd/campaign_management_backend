@@ -62,9 +62,9 @@ export const fetchLeads = async (searchQuery, leadLimit = 5, campaignId = null) 
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({
       searchStringsArray: [searchQuery],
       maxCrawledPlacesPerSearch: maxPlaces,
+      maxCrawledPlaces: maxPlaces,
       scrapeResponseHeaders: false,
       includeContactDetails: true,
       scrapeSocialMediaProfiles: {
