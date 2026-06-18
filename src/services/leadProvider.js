@@ -10,7 +10,9 @@ dotenv.config();
  * @param {number} leadLimit The maximum number of leads to fetch
  * @returns {Promise<Array>} List of business leads
  */
-export const fetchLeads = async (searchQuery, leadLimit = 5) => {
+export const activeRuns = new Map(); // Tracks campaignId -> runId
+
+export const fetchLeads = async (searchQuery, leadLimit = 5, campaignId = null) => {
   // Mock mode: return fake leads for testing without Apify
   if (process.env.LEAD_PROVIDER === 'mock') {
     console.log(`[LeadProvider] MOCK MODE - Returning up to ${leadLimit} dummy leads for: "${searchQuery}"`);
@@ -83,6 +85,10 @@ export const fetchLeads = async (searchQuery, leadLimit = 5) => {
   const datasetId = runResult.data.defaultDatasetId;
   console.log(`[LeadProvider] Actor run triggered. Run ID: ${runId}, Dataset ID: ${datasetId}`);
 
+  if (campaignId) {
+    activeRuns.set(campaignId, runId);
+  }
+
   // 2. Poll status until execution completes (Limit: 5 minutes)
   let status = 'RUNNING';
   let pollCount = 0;
@@ -140,4 +146,31 @@ export const fetchLeads = async (searchQuery, leadLimit = 5) => {
       placeId: item.placeId || item.cid || null
     };
   });
+};
+
+/**
+ * Abort a running Apify scraper for a given campaign.
+ * @param {number|string} campaignId 
+ */
+export const abortRun = async (campaignId) => {
+  const runId = activeRuns.get(campaignId);
+  if (!runId) {
+    throw new Error(`No active Apify run found for campaign ID ${campaignId}`);
+  }
+
+  const apifyToken = process.env.APIFY_TOKEN;
+  if (!apifyToken) throw new Error('APIFY_TOKEN is missing');
+
+  console.log(`[LeadProvider] Aborting Apify Run ID ${runId} for Campaign ID ${campaignId}...`);
+  const abortUrl = `https://api.apify.com/v2/actor-runs/${runId}/abort?token=${apifyToken}`;
+  const response = await fetch(abortUrl, { method: 'POST' });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to abort run ${runId}: ${errorText}`);
+  }
+
+  console.log(`[LeadProvider] Successfully sent abort request for Run ID ${runId}.`);
+  activeRuns.delete(campaignId);
+  return true;
 };

@@ -43,7 +43,7 @@ export const checkAndRunCampaigns = async () => {
         await db.saveLog(campaignId, `Campaign status updated to 'R' (Running).`);
 
         // 2. Fetch Leads from Lead Provider
-        const rawLeads = await fetchLeads(campaign.search_query, campaign.lead_limit);
+        const rawLeads = await fetchLeads(campaign.search_query, campaign.lead_limit, campaignId);
         await db.saveLog(campaignId, `Fetched ${rawLeads.length} lead(s) for query: "${campaign.search_query}".`);
 
         const savedLeads = [];

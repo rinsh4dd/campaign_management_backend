@@ -1,5 +1,6 @@
 import { db } from '../config/db.js';
 import { checkAndRunCampaigns } from '../services/schedulerService.js';
+import { abortRun } from '../services/leadProvider.js';
 
 /**
  * Handle all Data Query (GET) operations based on mode
@@ -75,6 +76,20 @@ export const handleAction = async (req, res) => {
         console.log('[API] Manually triggered campaign scheduler run.');
         checkAndRunCampaigns();
         return res.status(202).json({ message: "Background campaign run triggered." });
+
+      case 'STOP':
+        if (!id) return res.status(400).json({ error: "Missing required 'id' for STOP action" });
+        try {
+          await abortRun(id);
+          await db.updateCampaignStatus(id, 'E');
+          await db.saveLog(id, `Campaign manually stopped by user.`);
+          return res.status(200).json({ message: `Campaign ${id} successfully stopped.` });
+        } catch (e) {
+          // If abort fails (e.g. not running), force update status anyway
+          await db.updateCampaignStatus(id, 'E');
+          await db.saveLog(id, `Campaign force stopped. Note: ${e.message}`);
+          return res.status(200).json({ message: `Campaign ${id} stopped (force update).` });
+        }
 
       default:
         return res.status(400).json({ error: `Invalid action: ${action}` });
